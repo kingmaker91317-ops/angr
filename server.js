@@ -37,6 +37,29 @@ function generateKey() {
   return `ANGRY-${seg()}-${seg()}-${seg()}`;
 }
 
+// Startup: load seed keys from env var (survives restarts)
+function initKeys() {
+  if (!fs.existsSync(KEYS_FILE)) fs.writeFileSync(KEYS_FILE, '[]');
+  const seedEnv = process.env.SEED_KEYS;
+  if (!seedEnv) return;
+  try {
+    const seedKeys = JSON.parse(seedEnv);
+    const existing = loadKeys();
+    let changed = false;
+    for (const sk of seedKeys) {
+      if (!existing.find(k => k.key === sk.key)) {
+        existing.push(sk);
+        changed = true;
+        console.log(`✅ Seed key loaded: ${sk.key}`);
+      }
+    }
+    if (changed) saveKeys(existing);
+  } catch (e) {
+    console.error('SEED_KEYS parse error:', e.message);
+  }
+}
+initKeys();
+
 // ─── Auth Middleware ──────────────────────────────────────
 function adminAuth(req, res, next) {
   const secret = req.headers['x-admin-secret'] || req.query.secret;
